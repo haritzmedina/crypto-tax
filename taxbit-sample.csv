@@ -1,0 +1,9 @@
+Date and Time;Transaction Type;Sent Quantity;Sent Currency;Sending Source;Received Quantity;Received Currency;Receiving Destination;Fee;Fee Currency;Exchange Transaction ID;Blockchain Transaction Hash
+2018-06-07T20:57:00Z;Buy;5500;USD;ShapeShift;1,25;BTC;ShapeShift;0,00032;BTC;;
+2018-06-07T21:57:00Z;Transfer In;;;;1,25;BTC;BitPanda;0,000122;BTC;;
+2018-06-08T22:58:00Z;Trade;1;BTC;BitPanda;10,08;ETH;BitPanda;0,0037;ETH;;
+2018-06-08T23:58:00Z;Transfer Out;10,08;ETH;BitPanda;;;;0,0019;ETH;;
+2018-06-11T12:58:00Z;Sale;10,08;ETH;BitPanda;5750;USD;BitPanda;0,12;USD;;
+2018-06-12T12:58:00Z;Income;;;;1;LTC;Hardware Wallet;;;;
+2018-06-13T12:58:00Z;Expense;0,005;BTC;Other Exchange;;;;;;;
+The data highlighted above is provided as an example only. Please remove all content (except header row) and replace it with your data before uploading. Only use .CSV format.;;;;;;;;;;;
