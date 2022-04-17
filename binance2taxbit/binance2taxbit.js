@@ -1,5 +1,7 @@
 const Papa = require('papaparse')
+const _ = require('lodash')
 const fs = require('fs')
+const { v4: uuidv4 } = require('uuid');
 const Transaction = require('../Transaction')
 
 let ledgersCSVText = fs.readFileSync("input/ledgers.csv", "utf8")
@@ -39,40 +41,47 @@ let isFiat = (currency) => {
     return !!fiatCurrencies[currencySolver(currency)];
 }
 
-//console.log(ledgersData.data[1])
+// Group by date
+let groupedData = _.values(_.groupBy(ledgersData.data, 'UTC_Time'))
 
 // Deposits
-let deposits = ledgersData.data.filter(transaction => {return transaction.type === 'deposit' && transaction.txid !== ''})
+let deposits = groupedData.filter(groupedElem => {
+    return groupedElem.find(elem => elem['Operation'] === 'Deposit')
+})
 let transactionsDeposits = deposits.map((deposit) => {
+    let depositElem = deposit.find(elem => elem['Operation'] === 'Deposit')
     return new Transaction({
-        dateTime: new Date(deposit.time).toISOString(),
+        dateTime: new Date(depositElem['UTC_Time']).toISOString(),
         type: 'Transfer In',
-        receivedQuantity: deposit.amount,
-        receivedCurrency: currencySolver(deposit.asset),
-        receivingDestination: 'Kraken',
-        exchangeTransactionId: deposit.txid
+        receivedQuantity: parseFloat(depositElem['Change']),
+        receivedCurrency: currencySolver(depositElem['Coin']),
+        receivingDestination: 'Binance',
+        exchangeTransactionId: uuidv4()
     })
 })
 
-fs.writeFileSync('output/kraken_deposit.csv', Papa.unparse(transactionsDeposits))
+fs.writeFileSync('output/binance_deposit.csv', Papa.unparse(transactionsDeposits))
 
 // Withdrawal
-let withdrawals = ledgersData.data.filter(transaction => {return transaction.type === 'withdrawal' && transaction.txid !== ''})
+let withdrawals = groupedData.filter(groupedElem => {
+    return groupedElem.find(elem => elem['Operation'] === 'Withdraw')
+})
 let transactionsWithdrawals = withdrawals.map((withdrawal) => {
+    let withdrawElem = withdrawal.find(elem => elem['Operation'] === 'Withdraw')
     return new Transaction({
-        dateTime: new Date(withdrawal.time).toISOString(),
+        dateTime: new Date(withdrawElem['UTC_Time']).toISOString(),
         type: 'Transfer Out',
-        sentQuantity: parseFloat(withdrawal.amount)*-1,
-        sentCurrency: currencySolver(withdrawal.asset),
-        sendingSource: 'Kraken',
-        exchangeTransactionId: withdrawal.txid,
-        fee: withdrawal.fee,
-        feeCurrency: currencySolver(withdrawal.asset)
+        sentQuantity: parseFloat(withdrawElem['Change'])*-1,
+        sentCurrency: currencySolver(withdrawElem['Coin']),
+        sendingSource: 'Binance',
+        exchangeTransactionId: uuidv4(),
+        fee: 0, // TODO Fee is included
+        feeCurrency: currencySolver(withdrawElem['Coin'])
     })
 })
 
-fs.writeFileSync('output/kraken_withdrawal.csv', Papa.unparse(transactionsWithdrawals))
-
+fs.writeFileSync('output/binance_withdrawal.csv', Papa.unparse(transactionsWithdrawals))
+/*
 // Staking
 let stakings = ledgersData.data.filter(transaction => {return transaction.type === 'staking' && transaction.txid !== ''})
 let transactionsStakings = stakings.map((staking) => {
@@ -188,3 +197,4 @@ let transactionsTrades = tradePairs.map((tradePair) => {
 fs.writeFileSync('output/kraken_trade.csv', Papa.unparse(transactionsTrades))
 
 // TODO Expenses
+*/
