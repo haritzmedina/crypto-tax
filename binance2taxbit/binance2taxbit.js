@@ -81,120 +81,120 @@ let transactionsWithdrawals = withdrawals.map((withdrawal) => {
 })
 
 fs.writeFileSync('output/binance_withdrawal.csv', Papa.unparse(transactionsWithdrawals))
-/*
+
 // Staking
-let stakings = ledgersData.data.filter(transaction => {return transaction.type === 'staking' && transaction.txid !== ''})
+let stakings = groupedData.filter(groupedElem => {
+    return groupedElem.find(elem => elem['Operation'] === 'ETH 2.0 Staking Rewards' ||
+        elem['Operation'] === 'POS savings interest' || elem['Operation'] === 'Savings Interest' ||
+        elem['Operation'] === 'Liquid Swap rewards')
+})
 let transactionsStakings = stakings.map((staking) => {
+    let stakingElem = staking.find(elem => elem['Operation'] === 'ETH 2.0 Staking Rewards' ||
+        elem['Operation'] === 'POS savings interest' || elem['Operation'] === 'Savings Interest' ||
+        elem['Operation'] === 'Liquid Swap rewards')
     return new Transaction({
-        dateTime: new Date(staking.time).toISOString(),
+        dateTime: new Date(stakingElem['UTC_Time']).toISOString(),
         type: 'Income',
-        receivedQuantity: staking.amount,
-        receivedCurrency: currencySolver(staking.asset),
-        receivingDestination: 'Kraken',
-        exchangeTransactionId: staking.txid
+        receivedQuantity: parseFloat(stakingElem['Change']).toFixed(8),
+        receivedCurrency: currencySolver(stakingElem['Coin']),
+        receivingDestination: 'Binance',
+        exchangeTransactionId: uuidv4()
     })
 })
 
-fs.writeFileSync('output/kraken_staking.csv', Papa.unparse(transactionsStakings))
+fs.writeFileSync('output/binance_staking.csv', Papa.unparse(transactionsStakings))
+
+//
+let tradesMapParse = ({buy, sell, fee, feeDiscount}) => {
+    // Calc fee
+    let feeQuantity = 0
+    let feeCurrency = ''
+    if (fee) {
+        feeCurrency = fee['Coin']
+        feeQuantity = parseFloat(fee['Change'])
+        if (feeDiscount) {
+            feeQuantity += parseFloat(feeDiscount['Change'])
+        }
+    }
+    return new Transaction({
+        dateTime: new Date(buy['UTC_Time']).toISOString(),
+        type: 'Buy',
+        sentQuantity: parseFloat(sell['Change']).toFixed(8)*-1,
+        sentCurrency: currencySolver(sell['Coin']),
+        sendingSource: 'Binance',
+        receivedCurrency: currencySolver(buy['Coin']),
+        receivedQuantity: buy['Change'],
+        receivingDestination: 'Binance',
+        fee: feeQuantity*-1,
+        feeCurrency: currencySolver(feeCurrency),
+        exchangeTransactionId: uuidv4()
+    })
+}
 
 // Buy
-let buyPairs = []
-ledgersData.data.forEach((transaction, index, array) => {
-    let pair = {}
-    if (transaction.type === 'trade' && isFiat(transaction.asset)) {
-        pair.origin = transaction
-        if (array.length > index+1 && array[index+1].refid === transaction.refid) {
-            pair.destination = array[index+1]
-            buyPairs.push(pair)
-        } else {
-            // Nothing to do, is a sale pair
-        }
-    }
+let buys = groupedData.filter(groupedElem => {
+    return groupedElem.find(elem => elem['Operation'] === 'Buy')
 })
 
-let transactionsBuys = buyPairs.map((buyPair) => {
-    return new Transaction({
-        dateTime: new Date(buyPair.origin.time).toISOString(),
-        type: 'Buy',
-        sentQuantity: parseFloat(buyPair.origin.amount)*-1,
-        sentCurrency: currencySolver(buyPair.origin.asset),
-        sendingSource: 'Kraken',
-        receivedCurrency: currencySolver(buyPair.destination.asset),
-        receivedQuantity: buyPair.destination.amount,
-        receivingDestination: 'Kraken',
-        fee: buyPair.origin.fee,
-        feeCurrency: currencySolver(buyPair.origin.asset),
-        exchangeTransactionId: buyPair.origin.refid
-    })
+let doubleTrades = buys.filter(group => group.length > 4)
+if (doubleTrades.length > 1) {
+    console.warn('You have ' + doubleTrades.length + ' possible problematic trades done at the exact same time. Check them in file: double_trades.csv and change date to a one second more or less to solve the conflict.')
+}
+
+fs.writeFileSync('output/double_trades.csv', Papa.unparse(_.flatten(doubleTrades)))
+
+// Get only buys using fiat
+let fiatBuys = buys.filter(buyGroup => {
+    return buyGroup.find(elem => (elem['Operation'] === 'Transaction Related' || (elem['Operation'] === 'Buy' && parseFloat(elem['Change']) < 0)) && isFiat(elem['Coin']))
 })
 
-fs.writeFileSync('output/kraken_buy.csv', Papa.unparse(transactionsBuys))
-
-// TODO Sales
-let salePairs = []
-ledgersData.data.forEach((transaction, index, array) => {
-    let pair = {}
-    if (transaction.type === 'trade' && isFiat(transaction.asset)) {
-        pair.destination = transaction
-        if (0 <= index-1 && array[index-1].refid === transaction.refid) {
-            pair.origin = array[index-1]
-            salePairs.push(pair)
-        } else {
-            // Nothing to do, is a bought pair
-        }
-    }
+let transactionsBuys = fiatBuys.map((buyGroup) => {
+    let buy = buyGroup.find(elem => elem['Operation'] === 'Buy' && parseFloat(elem['Change']) > 0)
+    let sell = buyGroup.find(elem => elem['Operation'] === 'Transaction Related' || (elem['Operation'] === 'Buy' && parseFloat(elem['Change']) < 0))
+    let fee = buyGroup.find(elem => elem['Operation'] === 'Fee')
+    let feeDiscount = buyGroup.find(elem => elem['Operation'] === 'Commission Fee Shared With You' || elem['Operation'] === 'Referral Kickback')
+    return tradesMapParse({buy, sell, fee, feeDiscount})
 })
 
-let transactionsSales = salePairs.map((salePair) => {
-    return new Transaction({
-        dateTime: new Date(salePair.origin.time).toISOString(),
-        type: 'Sale',
-        sentQuantity: parseFloat(salePair.origin.amount)*-1,
-        sentCurrency: currencySolver(salePair.origin.asset),
-        sendingSource: 'Kraken',
-        receivedCurrency: currencySolver(salePair.destination.asset),
-        receivedQuantity: salePair.destination.amount,
-        receivingDestination: 'Kraken',
-        fee: salePair.destination.fee,
-        feeCurrency: currencySolver(salePair.destination.asset),
-        exchangeTransactionId: salePair.origin.refid
-    })
+fs.writeFileSync('output/binance_buy.csv', Papa.unparse(transactionsBuys))
+
+// Sales
+let sales = groupedData.filter(groupedElem => {
+    return groupedElem.find(elem => elem['Operation'] === 'Buy')
 })
 
-fs.writeFileSync('output/kraken_sale.csv', Papa.unparse(transactionsSales))
+// Get only buys using fiat
+let fiatSales = sales.filter(saleGroup => {
+    return saleGroup.find(elem => elem['Operation'] === 'Buy' && parseFloat(elem['Change']) > 0 && isFiat(elem['Coin']))
+})
+
+let transactionsSales = fiatSales.map((buyGroup) => {
+    let buy = buyGroup.find(elem => elem['Operation'] === 'Buy' && parseFloat(elem['Change']) > 0)
+    let sell = buyGroup.find(elem => elem['Operation'] === 'Transaction Related' || (elem['Operation'] === 'Buy' && parseFloat(elem['Change']) < 0))
+    let fee = buyGroup.find(elem => elem['Operation'] === 'Fee')
+    let feeDiscount = buyGroup.find(elem => elem['Operation'] === 'Commission Fee Shared With You' || elem['Operation'] === 'Referral Kickback')
+    return tradesMapParse({buy, sell, fee, feeDiscount})
+})
+
+fs.writeFileSync('output/binance_sale.csv', Papa.unparse(transactionsSales))
 
 // Trades
-let tradePairs = []
-ledgersData.data.forEach((transaction, index, array) => {
-    let pair = {}
-    if (transaction.type === 'trade' && !isFiat(transaction.asset)) {
-        pair.origin = transaction
-        if (array.length > index+1 && array[index+1].refid === transaction.refid && !isFiat(array[index+1].asset)) {
-            pair.destination = array[index+1]
-            tradePairs.push(pair)
-        } else {
-            // Nothing to do, is a fiat bought or crypto trade destination
-        }
-    }
+let trades = buys.filter(tradeGroup => {
+    return _.every(tradeGroup, elem => elem['Operation'] === 'Buy' && !isFiat(elem['Coin']))
 })
 
-let transactionsTrades = tradePairs.map((tradePair) => {
-    return new Transaction({
-        dateTime: new Date(tradePair.origin.time).toISOString(),
-        type: 'Sale',
-        sentQuantity: parseFloat(tradePair.origin.amount)*-1,
-        sentCurrency: currencySolver(tradePair.origin.asset),
-        sendingSource: 'Kraken',
-        receivedCurrency: currencySolver(tradePair.destination.asset),
-        receivedQuantity: tradePair.destination.amount,
-        receivingDestination: 'Kraken',
-        fee: tradePair.origin.fee,
-        feeCurrency: currencySolver(tradePair.origin.asset),
-        exchangeTransactionId: tradePair.origin.refid
-    })
+let transactionsTrades = trades.map((buyGroup) => {
+    let buy = buyGroup.find(elem => elem['Operation'] === 'Buy' && parseFloat(elem['Change']) > 0)
+    let sell = buyGroup.find(elem => elem['Operation'] === 'Transaction Related' || (elem['Operation'] === 'Buy' && parseFloat(elem['Change']) < 0))
+    let fee = buyGroup.find(elem => elem['Operation'] === 'Fee')
+    let feeDiscount = buyGroup.find(elem => elem['Operation'] === 'Commission Fee Shared With You' || elem['Operation'] === 'Referral Kickback')
+    return tradesMapParse({buy, sell, fee, feeDiscount})
 })
 
-fs.writeFileSync('output/kraken_trade.csv', Papa.unparse(transactionsTrades))
+fs.writeFileSync('output/binance_trade.csv', Papa.unparse(transactionsTrades))
 
 // TODO Expenses
-*/
+
+// A file for all transactions
+let allTransactions = _.concat(transactionsTrades, transactionsSales, transactionsBuys, transactionsStakings, transactionsDeposits, transactionsWithdrawals)
+fs.writeFileSync('output/binance_all.csv', Papa.unparse(allTransactions))

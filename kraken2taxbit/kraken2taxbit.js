@@ -1,5 +1,6 @@
 const Papa = require('papaparse')
 const fs = require('fs')
+const _ = require('lodash')
 const Transaction = require('../Transaction')
 
 let ledgersCSVText = fs.readFileSync("input/ledgers.csv", "utf8")
@@ -8,11 +9,14 @@ let ledgersData = Papa.parse(ledgersCSVText, {header: true})
 let currencySolver = (currency) => {
     let currencies = {
         ZEUR: 'EUR',
+        ZUSD: 'USD',
         XXBT: 'BTC',
         XBT: 'BTC',
         XETH: 'ETH',
         ETH2: 'ETH',
         XXRP: 'XRP',
+        XXLM: 'XLM',
+        XXMR: 'XMR',
         XLTC: 'LTC',
         'DOT.S': 'DOT',
         'XBT.M': 'BTC',
@@ -21,7 +25,9 @@ let currencySolver = (currency) => {
         'ALGO.S': 'ALGO',
         'ADA.S': 'ADA',
         'SOL.S': 'SOL',
-        'KSM.S': 'KSM'
+        'KSM.S': 'KSM',
+        'DOT.P': 'DOT',
+        'KSM.P': 'KSM'
     }
     if (currencies[currency]) {
         return currencies[currency]
@@ -158,7 +164,7 @@ fs.writeFileSync('output/kraken_sale.csv', Papa.unparse(transactionsSales))
 let tradePairs = []
 ledgersData.data.forEach((transaction, index, array) => {
     let pair = {}
-    if (transaction.type === 'trade' && !isFiat(transaction.asset)) {
+    if ((transaction.type === 'trade' || transaction.type === 'spend') && !isFiat(transaction.asset)) {
         pair.origin = transaction
         if (array.length > index+1 && array[index+1].refid === transaction.refid && !isFiat(array[index+1].asset)) {
             pair.destination = array[index+1]
@@ -188,3 +194,7 @@ let transactionsTrades = tradePairs.map((tradePair) => {
 fs.writeFileSync('output/kraken_trade.csv', Papa.unparse(transactionsTrades))
 
 // TODO Expenses
+
+let allTransactions = _.concat(transactionsTrades, transactionsSales, transactionsBuys, transactionsStakings, transactionsDeposits, transactionsWithdrawals)
+fs.writeFileSync('output/kraken_all.csv', Papa.unparse(allTransactions))
+
