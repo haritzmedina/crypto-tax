@@ -180,8 +180,11 @@ fs.writeFileSync('output/binance_sale.csv', Papa.unparse(transactionsSales))
 
 // Trades
 let trades = buys.filter(tradeGroup => {
-    return _.every(tradeGroup, elem => elem['Operation'] === 'Buy' && !isFiat(elem['Coin']))
+    let buysInTrade = tradeGroup.filter(elem => elem['Operation'] === 'Buy' || elem['Operation'] === 'Transaction Related')
+    return _.every(buysInTrade, elem => !isFiat(elem['Coin']))
 })
+
+fs.writeFileSync('output/test.json', JSON.stringify(buys, null, 2))
 
 let transactionsTrades = trades.map((buyGroup) => {
     let buy = buyGroup.find(elem => elem['Operation'] === 'Buy' && parseFloat(elem['Change']) > 0)
@@ -198,3 +201,4 @@ fs.writeFileSync('output/binance_trade.csv', Papa.unparse(transactionsTrades))
 // A file for all transactions
 let allTransactions = _.concat(transactionsTrades, transactionsSales, transactionsBuys, transactionsStakings, transactionsDeposits, transactionsWithdrawals)
 fs.writeFileSync('output/binance_all.csv', Papa.unparse(allTransactions))
+fs.writeFileSync('output/binance_all_koinly.csv', Papa.unparse(allTransactions.map(trans => trans.toKoinly())))

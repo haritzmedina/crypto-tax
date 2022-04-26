@@ -26,6 +26,27 @@ class Transaction {
         this['Exchange Transaction ID'] = exchangeTransactionId
         this['Blockchain Transaction Hash'] = blockchainTransactionHash
     }
+
+    toTaxBit () {
+        return this
+    }
+
+    toKoinly () {
+        return {
+            'Date': this['Date and Time'],
+            'Sent Amount': this['Sent Quantity'],
+            'Sent Currency': this['Sent Currency'],
+            'Received Amount': this['Received Quantity'],
+            'Received Currency': this['Received Currency'],
+            'Fee Amount': this['Fee'],
+            'Fee Currency': this['Fee Currency'],
+            'Net Worth Amount': '', // TODO
+            'Net Worth Currency': '', // TODO
+            'Label' : this['Transaction Type'],
+            'Description': this['Transaction Type'] + ' from ' + this['Sending Source'] + ' to ' + this['Receiving Destination'],
+            'TxHash': this['Exchange Transaction ID']
+        }
+    }
 }
 
 module.exports = Transaction
