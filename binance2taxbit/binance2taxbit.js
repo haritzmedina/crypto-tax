@@ -194,6 +194,26 @@ let transactionsTrades = trades.map((buyGroup) => {
     return tradesMapParse({buy, sell, fee, feeDiscount})
 })
 
+// BNB Small assets
+let bnbTrades = groupedData.filter(groupedElem => {
+    return groupedElem.find(elem => elem['Operation'] === 'Small assets exchange BNB')
+})
+
+let doubleTradesBnb = bnbTrades.filter(group => group.length > 2)
+if (doubleTradesBnb.length > 1) {
+    console.warn('You have ' + doubleTradesBnb.length + ' possible problematic trades done at the exact same time in BNB small assets. Check them in file: double_trades.csv and change date to a one second more or less to solve the conflict.')
+}
+
+fs.writeFileSync('output/double_trades.csv', Papa.unparse(_.flatten(doubleTradesBnb)))
+
+let transactionsBNB = bnbTrades.map((buyGroup) => {
+    let buy = buyGroup.find(elem => elem['Operation'] === 'Small assets exchange BNB' && parseFloat(elem['Change']) > 0)
+    let sell = buyGroup.find(elem => elem['Operation'] === 'Small assets exchange BNB' && parseFloat(elem['Change']) < 0)
+    return tradesMapParse({buy, sell})
+})
+
+transactionsTrades = transactionsTrades.concat(transactionsBNB)
+
 fs.writeFileSync('output/binance_trade.csv', Papa.unparse(transactionsTrades))
 
 // TODO Expenses
