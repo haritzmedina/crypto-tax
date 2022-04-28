@@ -4,7 +4,7 @@ const fs = require('fs')
 const { v4: uuidv4 } = require('uuid');
 const Transaction = require('../Transaction')
 
-let ledgersCSVText = fs.readFileSync("input/ledgers.csv", "utf8")
+let ledgersCSVText = fs.readFileSync("input/ledgers-binance.csv", "utf8")
 let ledgersData = Papa.parse(ledgersCSVText, {header: true})
 
 let currencySolver = (currency) => {

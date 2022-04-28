@@ -3,7 +3,7 @@ const fs = require('fs')
 const _ = require('lodash')
 const Transaction = require('../Transaction')
 
-let ledgersCSVText = fs.readFileSync("input/ledgers.csv", "utf8")
+let ledgersCSVText = fs.readFileSync("input/ledgers-kraken.csv", "utf8")
 let ledgersData = Papa.parse(ledgersCSVText, {header: true})
 
 let currencySolver = (currency) => {
