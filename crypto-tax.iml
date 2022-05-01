@@ -3,10 +3,10 @@
   <component name="NewModuleRootManager" inherit-compiler-output="true">
     <exclude-output />
     <content url="file://$MODULE_DIR$">
-      <excludeFolder url="file://$MODULE_DIR$/binance2taxbit/output" />
-      <excludeFolder url="file://$MODULE_DIR$/binance2taxbit/input" />
-      <excludeFolder url="file://$MODULE_DIR$/kraken2taxbit/input" />
-      <excludeFolder url="file://$MODULE_DIR$/kraken2taxbit/output" />
+      <excludeFolder url="file://$MODULE_DIR$/kraken/input" />
+      <excludeFolder url="file://$MODULE_DIR$/kraken/output" />
+      <excludeFolder url="file://$MODULE_DIR$/binance/input" />
+      <excludeFolder url="file://$MODULE_DIR$/binance/output" />
     </content>
     <orderEntry type="sourceFolder" forTests="false" />
   </component>

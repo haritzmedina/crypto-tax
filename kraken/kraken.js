@@ -197,4 +197,10 @@ fs.writeFileSync('output/kraken_trade.csv', Papa.unparse(transactionsTrades))
 
 let allTransactions = _.concat(transactionsTrades, transactionsSales, transactionsBuys, transactionsStakings, transactionsDeposits, transactionsWithdrawals)
 fs.writeFileSync('output/kraken_all.csv', Papa.unparse(allTransactions))
+fs.writeFileSync('output/kraken_all_koinly.csv', Papa.unparse(allTransactions.map(trans => trans.toKoinly())))
 
+let usedTransactions = _.concat(deposits, withdrawals, stakings, _.flatten(buyPairs), _.flatten(salePairs), _.flatten(tradePairs))
+let nonUsedTransactions = _.difference(ledgersData.data, usedTransactions)
+console.log(nonUsedTransactions)
+
+fs.writeFileSync('output/non_used_transactions.csv', Papa.unparse(nonUsedTransactions))

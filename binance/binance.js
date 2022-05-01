@@ -220,5 +220,14 @@ fs.writeFileSync('output/binance_trade.csv', Papa.unparse(transactionsTrades))
 
 // A file for all transactions
 let allTransactions = _.concat(transactionsTrades, transactionsSales, transactionsBuys, transactionsStakings, transactionsDeposits, transactionsWithdrawals)
-fs.writeFileSync('output/binance_all.csv', Papa.unparse(allTransactions))
+fs.writeFileSync('output/binance_all_taxbit.csv', Papa.unparse(allTransactions))
 fs.writeFileSync('output/binance_all_koinly.csv', Papa.unparse(allTransactions.map(trans => trans.toKoinly())))
+
+let usedTransactions = _.concat(deposits, withdrawals, stakings, _.flatten(buys), _.flatten(sales), _.flatten(trades))
+let nonUsedTransactions = ledgersData.data.filter(elem => usedTransactions.includes(elem))
+
+console.log(ledgersData.data.length)
+console.log(nonUsedTransactions.length)
+console.log(usedTransactions.length)
+
+fs.writeFileSync('output/non_used_transactions.csv', Papa.unparse(nonUsedTransactions))
