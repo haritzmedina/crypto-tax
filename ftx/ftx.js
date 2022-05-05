@@ -95,7 +95,65 @@ let transactionsStakings = stakings.data.map((staking) => {
 
 fs.writeFileSync('output/ftx_staking.csv', Papa.unparse(transactionsStakings))
 
+// Lending
+let lendingsCSVText = fs.readFileSync("input/ftx-lending.csv", "utf8")
+let lendings = Papa.parse(lendingsCSVText, {header: true})
+
+let transactionsLendings = lendings.data.map((lending) => {
+    return new Transaction({
+        dateTime: lending['Time'],
+        type: 'Income',
+        receivedQuantity: parseFloat(lending['Proceeds']).toFixed(8),
+        receivedCurrency: currencySolver(lending['Currency']),
+        receivingDestination: 'FTX',
+        exchangeTransactionId: uuidv4()
+    })
+})
+
+fs.writeFileSync('output/ftx_lending.csv', Papa.unparse(transactionsLendings))
+
 // Buy
+let tradesCSVText = fs.readFileSync("input/ftx-trades.csv", "utf8")
+let trades = Papa.parse(tradesCSVText, {header: true})
+
+let buyTrades = trades.data.filter((trade) => {
+    return (isFiat(trade['Market'].split('/')[1]) && !isFiat(trade['Market'].split('/')[0]) && trade['Side'] === 'buy')
+        || (isFiat(trade['Market'].split('/')[0]) && !isFiat(trade['Market'].split('/')[1]) && trade['Side'] === 'sell')
+})
+
+let transactionsBuys = buyTrades.map((trade) => {
+    if (trade['Side'] === 'buy') {
+        return new Transaction({
+            dateTime: trade['Time'],
+            type: 'Buy',
+            sentQuantity: parseFloat(trade['Total']),
+            sentCurrency: currencySolver(trade['Market'].split('/')[1]),
+            receivingDestination: 'FTX',
+            receivedCurrency: currencySolver(trade['Market'].split('/')[0]),
+            receivedQuantity: parseFloat(trade['Size']),
+            fee: trade['Fee'],
+            feeCurrency: currencySolver(trade['Fee Currency']),
+            exchangeTransactionId: trade['ID']
+        })
+    } else if (trade['Side'] === 'sell') {
+        return new Transaction({
+            dateTime: trade['Time'],
+            type: 'Buy',
+            sentQuantity: parseFloat(trade['Size']),
+            sentCurrency: currencySolver(trade['Market'].split('/')[0]),
+            receivingDestination: 'FTX',
+            receivedCurrency: currencySolver(trade['Market'].split('/')[1]),
+            receivedQuantity: parseFloat(trade['Total']),
+            fee: trade['Fee'],
+            feeCurrency: currencySolver(trade['Fee Currency']),
+            exchangeTransactionId: trade['ID']
+        })
+    }
+})
+
+fs.writeFileSync('output/ftx_buy.csv', Papa.unparse(transactionsBuys))
+
+
 /*
 let buys = groupedData.filter(groupedElem => {
     return groupedElem.find(elem => elem['Operation'] === 'Buy')
