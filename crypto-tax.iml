@@ -7,6 +7,8 @@
       <excludeFolder url="file://$MODULE_DIR$/kraken/output" />
       <excludeFolder url="file://$MODULE_DIR$/binance/input" />
       <excludeFolder url="file://$MODULE_DIR$/binance/output" />
+      <excludeFolder url="file://$MODULE_DIR$/ftx/input" />
+      <excludeFolder url="file://$MODULE_DIR$/ftx/output" />
     </content>
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
