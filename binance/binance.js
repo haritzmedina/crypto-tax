@@ -51,7 +51,7 @@ let deposits = groupedData.filter(groupedElem => {
 let transactionsDeposits = deposits.map((deposit) => {
     let depositElem = deposit.find(elem => elem['Operation'] === 'Deposit')
     return new Transaction({
-        dateTime: new Date(depositElem['UTC_Time']).toISOString(),
+        dateTime: new Date(depositElem['UTC_Time']+'+00:00').toISOString(),
         type: 'Transfer In',
         receivedQuantity: parseFloat(depositElem['Change']),
         receivedCurrency: currencySolver(depositElem['Coin']),
@@ -69,7 +69,7 @@ let withdrawals = groupedData.filter(groupedElem => {
 let transactionsWithdrawals = withdrawals.map((withdrawal) => {
     let withdrawElem = withdrawal.find(elem => elem['Operation'] === 'Withdraw')
     return new Transaction({
-        dateTime: new Date(withdrawElem['UTC_Time']).toISOString(),
+        dateTime: new Date(withdrawElem['UTC_Time']+'+00:00').toISOString(),
         type: 'Transfer Out',
         sentQuantity: parseFloat(withdrawElem['Change'])*-1,
         sentCurrency: currencySolver(withdrawElem['Coin']),
@@ -93,7 +93,7 @@ let transactionsStakings = stakings.map((staking) => {
         elem['Operation'] === 'POS savings interest' || elem['Operation'] === 'Savings Interest' ||
         elem['Operation'] === 'Liquid Swap rewards')
     return new Transaction({
-        dateTime: new Date(stakingElem['UTC_Time']).toISOString(),
+        dateTime: new Date(stakingElem['UTC_Time']+'+00:00').toISOString(),
         type: 'Income',
         receivedQuantity: parseFloat(stakingElem['Change']).toFixed(8),
         receivedCurrency: currencySolver(stakingElem['Coin']),
@@ -117,7 +117,7 @@ let tradesMapParse = ({buy, sell, fee, feeDiscount}) => {
         }
     }
     return new Transaction({
-        dateTime: new Date(buy['UTC_Time']).toISOString(),
+        dateTime: new Date(buy['UTC_Time']+'+00:00').toISOString(),
         type: 'Buy',
         sentQuantity: parseFloat(sell['Change']).toFixed(8)*-1,
         sentCurrency: currencySolver(sell['Coin']),
