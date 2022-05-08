@@ -112,10 +112,10 @@ let transactionsLendings = lendings.data.map((lending) => {
 
 fs.writeFileSync('output/ftx_lending.csv', Papa.unparse(transactionsLendings))
 
-// Buy
 let tradesCSVText = fs.readFileSync("input/ftx-trades.csv", "utf8")
 let trades = Papa.parse(tradesCSVText, {header: true})
 
+// Buy
 let buyTrades = trades.data.filter((trade) => {
     return (isFiat(trade['Market'].split('/')[1]) && !isFiat(trade['Market'].split('/')[0]) && trade['Side'] === 'buy')
         || (isFiat(trade['Market'].split('/')[0]) && !isFiat(trade['Market'].split('/')[1]) && trade['Side'] === 'sell')
@@ -153,96 +153,89 @@ let transactionsBuys = buyTrades.map((trade) => {
 
 fs.writeFileSync('output/ftx_buy.csv', Papa.unparse(transactionsBuys))
 
-
-/*
-let buys = groupedData.filter(groupedElem => {
-    return groupedElem.find(elem => elem['Operation'] === 'Buy')
-})
-
-let doubleTrades = buys.filter(group => group.length > 4)
-if (doubleTrades.length > 1) {
-    console.warn('You have ' + doubleTrades.length + ' possible problematic trades done at the exact same time. Check them in file: double_trades.csv and change date to a one second more or less to solve the conflict.')
-}
-
-fs.writeFileSync('output/double_trades.csv', Papa.unparse(_.flatten(doubleTrades)))
-
-// Get only buys using fiat
-let fiatBuys = buys.filter(buyGroup => {
-    return buyGroup.find(elem => (elem['Operation'] === 'Transaction Related' || (elem['Operation'] === 'Buy' && parseFloat(elem['Change']) < 0)) && isFiat(elem['Coin']))
-})
-
-let transactionsBuys = fiatBuys.map((buyGroup) => {
-    let buy = buyGroup.find(elem => elem['Operation'] === 'Buy' && parseFloat(elem['Change']) > 0)
-    let sell = buyGroup.find(elem => elem['Operation'] === 'Transaction Related' || (elem['Operation'] === 'Buy' && parseFloat(elem['Change']) < 0))
-    let fee = buyGroup.find(elem => elem['Operation'] === 'Fee')
-    let feeDiscount = buyGroup.find(elem => elem['Operation'] === 'Commission Fee Shared With You' || elem['Operation'] === 'Referral Kickback')
-    return tradesMapParse({buy, sell, fee, feeDiscount})
-})
-
-fs.writeFileSync('output/binance_buy.csv', Papa.unparse(transactionsBuys))
-
 // Sales
-let sales = groupedData.filter(groupedElem => {
-    return groupedElem.find(elem => elem['Operation'] === 'Buy')
+let saleTrades = trades.data.filter((trade) => {
+    return (isFiat(trade['Market'].split('/')[0]) && !isFiat(trade['Market'].split('/')[1]) && trade['Side'] === 'buy')
+        || (isFiat(trade['Market'].split('/')[1]) && !isFiat(trade['Market'].split('/')[0]) && trade['Side'] === 'sell')
 })
 
-// Get only buys using fiat
-let fiatSales = sales.filter(saleGroup => {
-    return saleGroup.find(elem => elem['Operation'] === 'Buy' && parseFloat(elem['Change']) > 0 && isFiat(elem['Coin']))
+let transactionsSales = saleTrades.map((trade) => {
+    if (trade['Side'] === 'buy') {
+        return new Transaction({
+            dateTime: trade['Time'],
+            type: 'Sale',
+            sentQuantity: parseFloat(trade['Total']),
+            sentCurrency: currencySolver(trade['Market'].split('/')[1]),
+            receivingDestination: 'FTX',
+            receivedCurrency: currencySolver(trade['Market'].split('/')[0]),
+            receivedQuantity: parseFloat(trade['Size']),
+            fee: trade['Fee'],
+            feeCurrency: currencySolver(trade['Fee Currency']),
+            exchangeTransactionId: trade['ID']
+        })
+    } else if (trade['Side'] === 'sell') {
+        return new Transaction({
+            dateTime: trade['Time'],
+            type: 'Sale',
+            sentQuantity: parseFloat(trade['Size']),
+            sentCurrency: currencySolver(trade['Market'].split('/')[0]),
+            receivingDestination: 'FTX',
+            receivedCurrency: currencySolver(trade['Market'].split('/')[1]),
+            receivedQuantity: parseFloat(trade['Total']),
+            fee: trade['Fee'],
+            feeCurrency: currencySolver(trade['Fee Currency']),
+            exchangeTransactionId: trade['ID']
+        })
+    }
 })
 
-let transactionsSales = fiatSales.map((buyGroup) => {
-    let buy = buyGroup.find(elem => elem['Operation'] === 'Buy' && parseFloat(elem['Change']) > 0)
-    let sell = buyGroup.find(elem => elem['Operation'] === 'Transaction Related' || (elem['Operation'] === 'Buy' && parseFloat(elem['Change']) < 0))
-    let fee = buyGroup.find(elem => elem['Operation'] === 'Fee')
-    let feeDiscount = buyGroup.find(elem => elem['Operation'] === 'Commission Fee Shared With You' || elem['Operation'] === 'Referral Kickback')
-    return tradesMapParse({buy, sell, fee, feeDiscount})
-})
-
-fs.writeFileSync('output/binance_sale.csv', Papa.unparse(transactionsSales))
+fs.writeFileSync('output/ftx_sale.csv', Papa.unparse(transactionsSales))
 
 // Trades
-let trades = buys.filter(tradeGroup => {
-    let buysInTrade = tradeGroup.filter(elem => elem['Operation'] === 'Buy' || elem['Operation'] === 'Transaction Related')
-    return _.every(buysInTrade, elem => !isFiat(elem['Coin']))
+let nonFiatTrades = trades.data.filter((trade) => {
+    return (!isFiat(trade['Market'].split('/')[0]) && !isFiat(trade['Market'].split('/')[1])) ||
+        (isFiat(trade['Market'].split('/')[0]) && isFiat(trade['Market'].split('/')[1]))
 })
 
-fs.writeFileSync('output/test.json', JSON.stringify(buys, null, 2))
-
-let transactionsTrades = trades.map((buyGroup) => {
-    let buy = buyGroup.find(elem => elem['Operation'] === 'Buy' && parseFloat(elem['Change']) > 0)
-    let sell = buyGroup.find(elem => elem['Operation'] === 'Transaction Related' || (elem['Operation'] === 'Buy' && parseFloat(elem['Change']) < 0))
-    let fee = buyGroup.find(elem => elem['Operation'] === 'Fee')
-    let feeDiscount = buyGroup.find(elem => elem['Operation'] === 'Commission Fee Shared With You' || elem['Operation'] === 'Referral Kickback')
-    return tradesMapParse({buy, sell, fee, feeDiscount})
+let transactionsTrades = nonFiatTrades.map((trade) => {
+    if (trade['Side'] === 'buy') {
+        return new Transaction({
+            dateTime: trade['Time'],
+            type: 'Trade',
+            sentQuantity: parseFloat(trade['Total']),
+            sentCurrency: currencySolver(trade['Market'].split('/')[1]),
+            receivingDestination: 'FTX',
+            receivedCurrency: currencySolver(trade['Market'].split('/')[0]),
+            receivedQuantity: parseFloat(trade['Size']),
+            fee: trade['Fee'],
+            feeCurrency: currencySolver(trade['Fee Currency']),
+            exchangeTransactionId: trade['ID']
+        })
+    } else if (trade['Side'] === 'sell') {
+        return new Transaction({
+            dateTime: trade['Time'],
+            type: 'Trade',
+            sentQuantity: parseFloat(trade['Size']),
+            sentCurrency: currencySolver(trade['Market'].split('/')[0]),
+            receivingDestination: 'FTX',
+            receivedCurrency: currencySolver(trade['Market'].split('/')[1]),
+            receivedQuantity: parseFloat(trade['Total']),
+            fee: trade['Fee'],
+            feeCurrency: currencySolver(trade['Fee Currency']),
+            exchangeTransactionId: trade['ID']
+        })
+    }
 })
 
-// BNB Small assets
-let bnbTrades = groupedData.filter(groupedElem => {
-    return groupedElem.find(elem => elem['Operation'] === 'Small assets exchange BNB')
-})
+fs.writeFileSync('output/ftx_trades.csv', Papa.unparse(transactionsTrades))
 
-let doubleTradesBnb = bnbTrades.filter(group => group.length > 2)
-if (doubleTradesBnb.length > 1) {
-    console.warn('You have ' + doubleTradesBnb.length + ' possible problematic trades done at the exact same time in BNB small assets. Check them in file: double_trades.csv and change date to a one second more or less to solve the conflict.')
-}
-
-fs.writeFileSync('output/double_trades.csv', Papa.unparse(_.flatten(doubleTradesBnb)))
-
-let transactionsBNB = bnbTrades.map((buyGroup) => {
-    let buy = buyGroup.find(elem => elem['Operation'] === 'Small assets exchange BNB' && parseFloat(elem['Change']) > 0)
-    let sell = buyGroup.find(elem => elem['Operation'] === 'Small assets exchange BNB' && parseFloat(elem['Change']) < 0)
-    return tradesMapParse({buy, sell})
-})
-
-transactionsTrades = transactionsTrades.concat(transactionsBNB)
-
-fs.writeFileSync('output/binance_trade.csv', Papa.unparse(transactionsTrades))
+let usedTransactions = _.concat(buyTrades, saleTrades, nonFiatTrades)
+let nonUsedTransactions = _.difference(trades.data, usedTransactions)
+console.log(nonUsedTransactions)
 
 // TODO Expenses
 
 // A file for all transactions
-let allTransactions = _.concat(transactionsTrades, transactionsSales, transactionsBuys, transactionsStakings, transactionsDeposits, transactionsWithdrawals)
-fs.writeFileSync('output/binance_all_taxbit.csv', Papa.unparse(allTransactions))
-fs.writeFileSync('output/binance_all_koinly.csv', Papa.unparse(allTransactions.map(trans => trans.toKoinly())))
-*/
+let allTransactions = _.concat(transactionsTrades, transactionsSales, transactionsBuys, transactionsStakings, transactionsLendings, transactionsDeposits, transactionsWithdrawals)
+fs.writeFileSync('output/ftx_all_taxbit.csv', Papa.unparse(allTransactions))
+fs.writeFileSync('output/ftx_all_koinly.csv', Papa.unparse(allTransactions.map(trans => trans.toKoinly())))
