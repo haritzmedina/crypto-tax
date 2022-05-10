@@ -105,30 +105,37 @@ let transactionsStakings = stakings.map((staking) => {
 fs.writeFileSync('output/binance_staking.csv', Papa.unparse(transactionsStakings))
 
 //
-let tradesMapParse = ({buy, sell, fee, feeDiscount}) => {
-    // Calc fee
-    let feeQuantity = 0
-    let feeCurrency = ''
-    if (fee) {
-        feeCurrency = fee['Coin']
-        feeQuantity = parseFloat(fee['Change'])
-        if (feeDiscount) {
-            feeQuantity += parseFloat(feeDiscount['Change'])
+let tradesMapParse = ({buy, sell, fee, feeDiscount, order = 'Buy'}) => {
+    try {
+        // Calc fee
+        let feeQuantity = 0
+        let feeCurrency = ''
+        if (fee) {
+            feeCurrency = fee['Coin']
+            feeQuantity = parseFloat(fee['Change'])
+            if (feeDiscount) {
+                feeQuantity += parseFloat(feeDiscount['Change'])
+            }
         }
+        return new Transaction({
+            dateTime: new Date(buy['UTC_Time']+'+00:00').toISOString(),
+            type: order,
+            sentQuantity: parseFloat(sell['Change']).toFixed(8)*-1,
+            sentCurrency: currencySolver(sell['Coin']),
+            sendingSource: 'Binance',
+            receivedCurrency: currencySolver(buy['Coin']),
+            receivedQuantity: buy['Change'],
+            receivingDestination: 'Binance',
+            fee: feeQuantity*-1,
+            feeCurrency: currencySolver(feeCurrency),
+            exchangeTransactionId: uuidv4()
+        })
+    } catch (e) {
+        console.log(buy)
+        console.log(sell)
+        console.log(fee)
+        console.log(feeDiscount)
     }
-    return new Transaction({
-        dateTime: new Date(buy['UTC_Time']+'+00:00').toISOString(),
-        type: 'Buy',
-        sentQuantity: parseFloat(sell['Change']).toFixed(8)*-1,
-        sentCurrency: currencySolver(sell['Coin']),
-        sendingSource: 'Binance',
-        receivedCurrency: currencySolver(buy['Coin']),
-        receivedQuantity: buy['Change'],
-        receivingDestination: 'Binance',
-        fee: feeQuantity*-1,
-        feeCurrency: currencySolver(feeCurrency),
-        exchangeTransactionId: uuidv4()
-    })
 }
 
 // Buy
@@ -160,38 +167,38 @@ fs.writeFileSync('output/binance_buy.csv', Papa.unparse(transactionsBuys))
 
 // Sales
 let sales = groupedData.filter(groupedElem => {
-    return groupedElem.find(elem => elem['Operation'] === 'Buy')
+    return groupedElem.find(elem => elem['Operation'] === 'Sell')
 })
 
-// Get only buys using fiat
+// Get only sales using fiat
 let fiatSales = sales.filter(saleGroup => {
-    return saleGroup.find(elem => elem['Operation'] === 'Buy' && parseFloat(elem['Change']) > 0 && isFiat(elem['Coin']))
+    return saleGroup.find(elem => elem['Operation'] === 'Sell' && parseFloat(elem['Change']) > 0 && isFiat(elem['Coin']))
 })
 
-let transactionsSales = fiatSales.map((buyGroup) => {
-    let buy = buyGroup.find(elem => elem['Operation'] === 'Buy' && parseFloat(elem['Change']) > 0)
-    let sell = buyGroup.find(elem => elem['Operation'] === 'Transaction Related' || (elem['Operation'] === 'Buy' && parseFloat(elem['Change']) < 0))
-    let fee = buyGroup.find(elem => elem['Operation'] === 'Fee')
-    let feeDiscount = buyGroup.find(elem => elem['Operation'] === 'Commission Fee Shared With You' || elem['Operation'] === 'Referral Kickback')
-    return tradesMapParse({buy, sell, fee, feeDiscount})
+let transactionsSales = fiatSales.map((saleGroup) => {
+    let buy = saleGroup.find(elem => elem['Operation'] === 'Sell' && parseFloat(elem['Change']) > 0)
+    let sell = saleGroup.find(elem => elem['Operation'] === 'Sell' && parseFloat(elem['Change']) < 0)
+    let fee = saleGroup.find(elem => elem['Operation'] === 'Fee')
+    let feeDiscount = saleGroup.find(elem => elem['Operation'] === 'Commission Fee Shared With You' || elem['Operation'] === 'Referral Kickback')
+    return tradesMapParse({buy, sell, fee, feeDiscount, order: 'Sale'})
 })
 
 fs.writeFileSync('output/binance_sale.csv', Papa.unparse(transactionsSales))
 
 // Trades
-let trades = buys.filter(tradeGroup => {
-    let buysInTrade = tradeGroup.filter(elem => elem['Operation'] === 'Buy' || elem['Operation'] === 'Transaction Related')
+let trades = buys.concat(sales).filter(tradeGroup => {
+    let buysInTrade = tradeGroup.filter(elem => elem['Operation'] === 'Buy' || elem['Operation'] === 'Sell' || elem['Operation'] === 'Transaction Related')
     return _.every(buysInTrade, elem => !isFiat(elem['Coin']))
 })
 
 fs.writeFileSync('output/test.json', JSON.stringify(buys, null, 2))
 
 let transactionsTrades = trades.map((buyGroup) => {
-    let buy = buyGroup.find(elem => elem['Operation'] === 'Buy' && parseFloat(elem['Change']) > 0)
-    let sell = buyGroup.find(elem => elem['Operation'] === 'Transaction Related' || (elem['Operation'] === 'Buy' && parseFloat(elem['Change']) < 0))
+    let buy = buyGroup.find(elem => (elem['Operation'] === 'Buy' || elem['Operation'] === 'Sell') && parseFloat(elem['Change']) > 0)
+    let sell = buyGroup.find(elem => elem['Operation'] === 'Transaction Related' || ((elem['Operation'] === 'Buy' || elem['Operation'] === 'Sell') && parseFloat(elem['Change']) < 0))
     let fee = buyGroup.find(elem => elem['Operation'] === 'Fee')
     let feeDiscount = buyGroup.find(elem => elem['Operation'] === 'Commission Fee Shared With You' || elem['Operation'] === 'Referral Kickback')
-    return tradesMapParse({buy, sell, fee, feeDiscount})
+    return tradesMapParse({buy, sell, fee, feeDiscount, order: 'Trade'})
 })
 
 // BNB Small assets
@@ -209,7 +216,7 @@ fs.writeFileSync('output/double_trades.csv', Papa.unparse(_.flatten(doubleTrades
 let transactionsBNB = bnbTrades.map((buyGroup) => {
     let buy = buyGroup.find(elem => elem['Operation'] === 'Small assets exchange BNB' && parseFloat(elem['Change']) > 0)
     let sell = buyGroup.find(elem => elem['Operation'] === 'Small assets exchange BNB' && parseFloat(elem['Change']) < 0)
-    return tradesMapParse({buy, sell})
+    return tradesMapParse({buy, sell, order: 'Trade'})
 })
 
 transactionsTrades = transactionsTrades.concat(transactionsBNB)
