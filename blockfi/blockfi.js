@@ -6,30 +6,7 @@ const Transaction = require('../Transaction')
 
 const exchangeName = 'BlockFi'
 
-let currencySolver = (currency) => {
-    let currencies = {
-        ZEUR: 'EUR',
-        XXBT: 'BTC',
-        XBT: 'BTC',
-        XETH: 'ETH',
-        ETH2: 'ETH',
-        XXRP: 'XRP',
-        XLTC: 'LTC',
-        'DOT.S': 'DOT',
-        'XBT.M': 'BTC',
-        'KAVA.S': 'KAVA',
-        'ATOM.S': 'ATOM',
-        'ALGO.S': 'ALGO',
-        'ADA.S': 'ADA',
-        'SOL.S': 'SOL',
-        'KSM.S': 'KSM'
-    }
-    if (currencies[currency]) {
-        return currencies[currency]
-    } else {
-        return currency
-    }
-}
+const currencySolver = require('../CurrencySolver')
 
 let isFiat = (currency) => {
     let fiatCurrencies = {
@@ -114,5 +91,5 @@ console.log(nonUsedTransactions)*/
 
 // A file for all transactions
 let allTransactions = _.concat(transactionsDeposits, transactionsWithdraw, transactionsInterest)
-fs.writeFileSync('output/ftx_all_taxbit.csv', Papa.unparse(allTransactions))
-fs.writeFileSync('output/ftx_all_koinly.csv', Papa.unparse(allTransactions.map(trans => trans.toKoinly())))
+fs.writeFileSync('output/blockfi_all_taxbit.csv', Papa.unparse(allTransactions))
+fs.writeFileSync('output/blockfi_all_koinly.csv', Papa.unparse(allTransactions.map(trans => trans.toKoinly())))

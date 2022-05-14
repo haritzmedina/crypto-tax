@@ -6,35 +6,7 @@ const Transaction = require('../Transaction')
 let ledgersCSVText = fs.readFileSync("input/ledgers-kraken.csv", "utf8")
 let ledgersData = Papa.parse(ledgersCSVText, {header: true})
 
-let currencySolver = (currency) => {
-    let currencies = {
-        ZEUR: 'EUR',
-        ZUSD: 'USD',
-        XXBT: 'BTC',
-        XBT: 'BTC',
-        XETH: 'ETH',
-        ETH2: 'ETH',
-        XXRP: 'XRP',
-        XXLM: 'XLM',
-        XXMR: 'XMR',
-        XLTC: 'LTC',
-        'DOT.S': 'DOT',
-        'XBT.M': 'BTC',
-        'KAVA.S': 'KAVA',
-        'ATOM.S': 'ATOM',
-        'ALGO.S': 'ALGO',
-        'ADA.S': 'ADA',
-        'SOL.S': 'SOL',
-        'KSM.S': 'KSM',
-        'DOT.P': 'DOT',
-        'KSM.P': 'KSM'
-    }
-    if (currencies[currency]) {
-        return currencies[currency]
-    } else {
-        return currency
-    }
-}
+const currencySolver = require('../CurrencySolver')
 
 let isFiat = (currency) => {
     let fiatCurrencies = {
