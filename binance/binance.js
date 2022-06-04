@@ -164,7 +164,7 @@ fs.writeFileSync('output/binance_sale.csv', Papa.unparse(transactionsSales))
 
 // Trades
 let trades = buys.concat(sales).filter(tradeGroup => {
-    let buysInTrade = tradeGroup.filter(elem => elem['Operation'] === 'Buy' || elem['Operation'] === 'Sell' || elem['Operation'] === 'Transaction Related')
+    let buysInTrade = tradeGroup.filter(elem => elem['Operation'] === 'Buy' || elem['Operation'] === 'Sell' || elem['Operation'] === 'Transaction Related' || elem['Operation'] === 'ETH 2.0 Staking')
     return _.every(buysInTrade, elem => !isFiat(elem['Coin']))
 })
 

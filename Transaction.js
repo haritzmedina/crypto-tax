@@ -47,6 +47,35 @@ class Transaction {
             'TxHash': this['Exchange Transaction ID']
         }
     }
+
+    toCointracking (exchange= '') {
+        let resolveType = {
+            'Transfer In': 'Deposit',
+            'Transfer Out': 'Withdrawal',
+            'Income': 'Income',
+            'Buy': 'Trade',
+            'Sale': 'Trade',
+            'Trade': 'Trade',
+            'Expense': 'Expense (non taxable)'
+        }
+
+        return {
+            'Type': resolveType[this['Transaction Type']],
+            'Buy Amount': this['Received Quantity'],
+            'Buy Currency': this['Received Currency'],
+            'Sell Amount': this['Sent Quantity'],
+            'Sell Currency': this['Sent Currency'],
+            'Fee': this['Fee'],
+            'Fee Currency': this['Fee Currency'],
+            'Exchange': exchange,
+            'Trade-Group': '', // TODO
+            'Comment': '', // TODO
+            'Date': this['Date and Time'],
+            'Tx-ID': this['Exchange Transaction ID'],
+            'Buy Value in Account Currency': '', // TODO
+            'Sell Value in Account Currency': ''
+        }
+    }
 }
 
 module.exports = Transaction

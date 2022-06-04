@@ -93,3 +93,4 @@ console.log(nonUsedTransactions)*/
 let allTransactions = _.concat(transactionsDeposits, transactionsWithdraw, transactionsInterest)
 fs.writeFileSync('output/blockfi_all_taxbit.csv', Papa.unparse(allTransactions))
 fs.writeFileSync('output/blockfi_all_koinly.csv', Papa.unparse(allTransactions.map(trans => trans.toKoinly())))
+fs.writeFileSync('output/blockfi_all_cointracking.csv', Papa.unparse(allTransactions.map(trans => trans.toCointracking(exchangeName))))

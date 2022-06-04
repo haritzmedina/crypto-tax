@@ -6,6 +6,8 @@ const Transaction = require('../Transaction')
 
 const currencySolver = require('../CurrencySolver')
 
+const exchangeName = 'FTX'
+
 let isFiat = (currency) => {
     let fiatCurrencies = {
         'EUR': 'EUR',
@@ -216,3 +218,4 @@ console.log(nonUsedTransactions)
 let allTransactions = _.concat(transactionsTrades, transactionsSales, transactionsBuys, transactionsStakings, transactionsLendings, transactionsDeposits, transactionsWithdrawals)
 fs.writeFileSync('output/ftx_all_taxbit.csv', Papa.unparse(allTransactions))
 fs.writeFileSync('output/ftx_all_koinly.csv', Papa.unparse(allTransactions.map(trans => trans.toKoinly())))
+fs.writeFileSync('output/ftx_all_cointracking.csv', Papa.unparse(allTransactions.map(trans => trans.toCointracking(exchangeName))))
