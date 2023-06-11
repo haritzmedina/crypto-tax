@@ -4,6 +4,8 @@ const fs = require('fs')
 const { v4: uuidv4 } = require('uuid');
 const Transaction = require('../Transaction')
 
+const exchangeName = 'Binance'
+
 let ledgersCSVText = fs.readFileSync("input/ledgers-binance.csv", "utf8")
 let ledgersData = Papa.parse(ledgersCSVText, {header: true})
 
@@ -206,6 +208,7 @@ fs.writeFileSync('output/binance_trade.csv', Papa.unparse(transactionsTrades))
 let allTransactions = _.concat(transactionsTrades, transactionsSales, transactionsBuys, transactionsStakings, transactionsDeposits, transactionsWithdrawals)
 fs.writeFileSync('output/binance_all_taxbit.csv', Papa.unparse(allTransactions))
 fs.writeFileSync('output/binance_all_koinly.csv', Papa.unparse(allTransactions.map(trans => trans.toKoinly())))
+fs.writeFileSync('output/binance_all_cointracking.csv', Papa.unparse(allTransactions.map(trans => trans.toCointracking(exchangeName))))
 
 let usedTransactions = _.concat(deposits, withdrawals, stakings, _.flatten(buys), _.flatten(sales), _.flatten(trades))
 let nonUsedTransactions = ledgersData.data.filter(elem => usedTransactions.includes(elem))

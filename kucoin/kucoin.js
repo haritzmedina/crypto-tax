@@ -17,6 +17,13 @@ let isFiat = (currency) => {
     return !!fiatCurrencies[currencySolver(currency)];
 }
 
+let parseKucoinDate = (dateTimeString) => {
+    let [datePart, timePart] = dateTimeString.split(' ');
+    let [year, month, day] = datePart.split('-').map(Number);
+    let [hours, minutes, seconds] = timePart.split(':').map(Number);
+    return new Date(year, month - 1, day, hours, minutes, seconds).toISOString();
+}
+
 // Deposits
 
 let depositsCSVText = fs.readFileSync("input/kucoin_deposit.csv", "utf8")
@@ -24,7 +31,7 @@ let deposits = Papa.parse(depositsCSVText, {header: true})
 
 let transactionsDeposits = deposits.data.map(deposit => {
     return new Transaction({
-        dateTime: new Date(deposit['Time']).toISOString(),
+        dateTime: parseKucoinDate(deposit["﻿Time"]),
         type: 'Transfer In',
         receivedQuantity: parseFloat(deposit['Amount']),
         receivedCurrency: currencySolver(deposit['Coin']),
@@ -36,10 +43,10 @@ let transactionsDeposits = deposits.data.map(deposit => {
 fs.writeFileSync('output/kucoin_deposit.csv', Papa.unparse(transactionsDeposits))
 
 // Withdrawal
-/*
-let withdraws = transactions.data.filter(transaction => {
-    return transaction[' Transaction type'] === 'Withdrawal'
-})
+
+let withdrawalCSVText = fs.readFileSync("input/kucoin_withdrawal.csv", "utf8")
+let withdraws = Papa.parse(withdrawalCSVText, {header: true})
+
 
 let transactionsWithdraw = withdraws.map(withdrawal => {
     return new Transaction({
@@ -52,8 +59,8 @@ let transactionsWithdraw = withdraws.map(withdrawal => {
     })
 })
 
-fs.writeFileSync('output/celsius_withdraw.csv', Papa.unparse(transactionsWithdraw))
-
+fs.writeFileSync('output/kucoin_withdraw.csv', Papa.unparse(transactionsWithdraw))
+/*
 
 // Loans interest
 
@@ -72,7 +79,7 @@ let transactionsInterest = loanInterests.map(interests => {
     })
 })
 
-fs.writeFileSync('output/celsius_interest.csv', Papa.unparse(transactionsInterest))
+fs.writeFileSync('output/kucoin_interest.csv', Papa.unparse(transactionsInterest))
 
 // TODO Buy
 
@@ -99,7 +106,7 @@ let transactionsTrades = trades.data.map(trade => {
         sentCurrency = trade['symbol'].split('-')[0]
     }
     return new Transaction({
-        dateTime: new Date(trade['tradeCreatedAt']).toISOString(),
+        dateTime: parseKucoinDate(trade['tradeCreatedAt']),
         type: 'Trade',
         receivedQuantity: parseFloat(receivedQuantity),
         receivedCurrency: currencySolver(receivedCurrency),
@@ -126,7 +133,7 @@ console.log(nonUsedTransactions)*/
 // Check pending transactions to be processed
 /*let usedTransactions = _.concat(loanInterests, deposits, withdraws)
 let nonUsedTransactions = _.difference(transactions.data, usedTransactions)
-fs.writeFileSync('output/celsius_pending.csv', Papa.unparse(nonUsedTransactions))*/
+fs.writeFileSync('output/kucoin_pending.csv', Papa.unparse(nonUsedTransactions))*/
 
 // A file for all transactions
 let allTransactions = _.concat(transactionsDeposits, transactionsTrades)

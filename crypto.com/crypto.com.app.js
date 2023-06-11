@@ -6,7 +6,7 @@ const Transaction = require('../Transaction')
 
 const currencySolver = require('../CurrencySolver')
 
-const exchangeName = 'FTX'
+const exchangeName = 'Crypto.com'
 
 let isFiat = (currency) => {
     let fiatCurrencies = {
@@ -89,15 +89,7 @@ let transactionsLendings = lendings.data.map((lending) => {
     })
 })
 
-
 fs.writeFileSync('output/ftx_lending.csv', Papa.unparse(transactionsLendings))
-
-let parseFTXDate = (dateTimeString) => {
-    let [dateString, timeString] = dateTimeString.split(', ');
-    let [day, month, year] = dateString.split('/').map(Number);
-    let [hours, minutes, seconds] = timeString.split(':').map(Number);
-    return new Date(year, month - 1, day, hours, minutes, seconds).toISOString();
-}
 
 let tradesCSVText = fs.readFileSync("input/ftx-trades.csv", "utf8")
 let trades = Papa.parse(tradesCSVText, {header: true})
@@ -111,7 +103,7 @@ let buyTrades = trades.data.filter((trade) => {
 let transactionsBuys = buyTrades.map((trade) => {
     if (trade['Side'] === 'buy') {
         return new Transaction({
-            dateTime: parseFTXDate(trade['Time']),
+            dateTime: trade['Time'],
             type: 'Buy',
             sentQuantity: parseFloat(trade['Total']),
             sentCurrency: currencySolver(trade['Market'].split('/')[1]),
@@ -124,7 +116,7 @@ let transactionsBuys = buyTrades.map((trade) => {
         })
     } else if (trade['Side'] === 'sell') {
         return new Transaction({
-            dateTime: parseFTXDate(trade['Time']),
+            dateTime: trade['Time'],
             type: 'Buy',
             sentQuantity: parseFloat(trade['Size']),
             sentCurrency: currencySolver(trade['Market'].split('/')[0]),
@@ -149,7 +141,7 @@ let saleTrades = trades.data.filter((trade) => {
 let transactionsSales = saleTrades.map((trade) => {
     if (trade['Side'] === 'buy') {
         return new Transaction({
-            dateTime: parseFTXDate(['Time']),
+            dateTime: trade['Time'],
             type: 'Sale',
             sentQuantity: parseFloat(trade['Total']),
             sentCurrency: currencySolver(trade['Market'].split('/')[1]),
@@ -162,7 +154,7 @@ let transactionsSales = saleTrades.map((trade) => {
         })
     } else if (trade['Side'] === 'sell') {
         return new Transaction({
-            dateTime: parseFTXDate(trade['Time']),
+            dateTime: trade['Time'],
             type: 'Sale',
             sentQuantity: parseFloat(trade['Size']),
             sentCurrency: currencySolver(trade['Market'].split('/')[0]),
@@ -187,7 +179,7 @@ let nonFiatTrades = trades.data.filter((trade) => {
 let transactionsTrades = nonFiatTrades.map((trade) => {
     if (trade['Side'] === 'buy') {
         return new Transaction({
-            dateTime: parseFTXDate(trade['Time']),
+            dateTime: trade['Time'],
             type: 'Trade',
             sentQuantity: parseFloat(trade['Total']),
             sentCurrency: currencySolver(trade['Market'].split('/')[1]),
@@ -200,7 +192,7 @@ let transactionsTrades = nonFiatTrades.map((trade) => {
         })
     } else if (trade['Side'] === 'sell') {
         return new Transaction({
-            dateTime: parseFTXDate(trade['Time']),
+            dateTime: trade['Time'],
             type: 'Trade',
             sentQuantity: parseFloat(trade['Size']),
             sentCurrency: currencySolver(trade['Market'].split('/')[0]),
@@ -215,27 +207,6 @@ let transactionsTrades = nonFiatTrades.map((trade) => {
 })
 
 fs.writeFileSync('output/ftx_trades.csv', Papa.unparse(transactionsTrades))
-
-// Conversion history
-let conversionHistoryCSVText = fs.readFileSync("input/ftx-conversionHistory.csv", "utf8")
-let conversionHistory = Papa.parse(conversionHistoryCSVText, {header: true})
-
-let transactionsConversions = conversionHistory.data.map((conversion) => {
-    return new Transaction({
-        dateTime: conversion['Time'],
-        type: 'Trade',
-        sentQuantity: parseFloat(conversion['Size']),
-        sentCurrency: currencySolver(conversion['From']),
-        receivingDestination: 'FTX',
-        receivedCurrency: currencySolver(conversion['To']),
-        receivedQuantity: parseFloat(conversion['To Size']),
-        fee: 0,
-        feeCurrency: currencySolver(conversion['From']),
-        exchangeTransactionId: conversion['ID']
-    })
-})
-
-fs.writeFileSync('output/ftx_conversions.csv', Papa.unparse(transactionsConversions))
 
 let usedTransactions = _.concat(buyTrades, saleTrades, nonFiatTrades)
 let nonUsedTransactions = _.difference(trades.data, usedTransactions)
